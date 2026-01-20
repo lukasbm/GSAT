@@ -2,10 +2,11 @@
 
 import torch
 import torch.nn.functional as F
+from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 from torch.nn import ModuleList
 from torch.nn import Sequential, ReLU, Linear
-from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 from torch_geometric.nn import BatchNorm, global_mean_pool
+
 from .conv_layers import PNAConvSimple
 
 
@@ -45,9 +46,9 @@ class PNA(torch.nn.Module):
             self.batch_norms.append(BatchNorm(hidden_size))
 
         self.pool = global_mean_pool
-        self.fc_out = Sequential(Linear(hidden_size, hidden_size//2), ReLU(),
-                                 Linear(hidden_size//2, hidden_size//4), ReLU(),
-                                 Linear(hidden_size//4, 1 if num_class == 2 and not multi_label else num_class))
+        self.fc_out = Sequential(Linear(hidden_size, hidden_size // 2), ReLU(),
+                                 Linear(hidden_size // 2, hidden_size // 4), ReLU(),
+                                 Linear(hidden_size // 4, 1 if num_class == 2 and not multi_label else num_class))
 
     def forward(self, x, edge_index, batch, edge_attr, edge_atten=None):
         x = self.node_encoder(x)

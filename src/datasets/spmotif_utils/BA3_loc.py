@@ -1,25 +1,23 @@
 """synthetic_structsim.py
 Copied from [gnn-model-explainer](https://github.com/RexYing/gnn-model-explainer)
 """
-import os
-
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
-import matplotlib.colors as colors
 
 import networkx as nx
-
 import numpy as np
+from matplotlib import pyplot as plt
+
 from . import synthetic_structsim, featgen
 
 figsize = (8, 6)
+
 
 def find_gd(edge_index, ids):
     row, col = edge_index
     gd = np.array(ids[row] > 0, dtype=np.float) * np.array(ids[col] > 0, dtype=np.float)
 
     return gd
+
+
 ####################################
 #
 # Experiment utilities
@@ -43,7 +41,7 @@ def perturb(graph_list, p, id=None):
                 v = np.random.randint(0, G.number_of_nodes())
                 if (not G.has_edge(u, v)) and (u != v):
                     break
-            if (not id == None) and (id[u]==0 or id[v]==0):
+            if (not id == None) and (id[u] == 0 or id[v] == 0):
                 G.add_edge(u, v)
         perturbed_graph_list.append(G)
     return perturbed_graph_list
@@ -395,5 +393,3 @@ def gen_syn8(nb_shapes=80, width_basis=8, feature_generator=None, m=3, draw=True
     name = basis_type + "_" + str(width_basis) + "_" + str(nb_shapes)
 
     return G, role_id, name
-
-

@@ -1,14 +1,10 @@
 # From Discovering Invariant Rationales for Graph Neural Networks
 
 import os.path as osp
-import pickle as pkl
-
-import yaml
-import torch
-import torch.nn.functional as F
-import random
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import torch
 from torch_geometric.data import InMemoryDataset, Data
 
 try:
@@ -45,9 +41,11 @@ class SPMotif(InMemoryDataset):
     def process(self):
 
         idx = self.raw_file_names.index('{}.npy'.format(self.mode))
-        edge_index_list, label_list, ground_truth_list, role_id_list, pos = np.load(osp.join(self.raw_dir, self.raw_file_names[idx]), allow_pickle=True)
+        edge_index_list, label_list, ground_truth_list, role_id_list, pos = np.load(
+            osp.join(self.raw_dir, self.raw_file_names[idx]), allow_pickle=True)
         data_list = []
-        for idx, (edge_index, y, ground_truth, z, p) in enumerate(zip(edge_index_list, label_list, ground_truth_list, role_id_list, pos)):
+        for idx, (edge_index, y, ground_truth, z, p) in enumerate(
+                zip(edge_index_list, label_list, ground_truth_list, role_id_list, pos)):
             edge_index = torch.from_numpy(edge_index).long()
             node_idx = torch.unique(edge_index)
             assert node_idx.max() == node_idx.size(0) - 1
@@ -62,7 +60,8 @@ class SPMotif(InMemoryDataset):
             node_label[node_label != 0] = 1
             edge_label = torch.tensor(ground_truth, dtype=torch.float)
 
-            data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, node_label=node_label, edge_label=edge_label)
+            data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, node_label=node_label,
+                        edge_label=edge_label)
             if self.pre_filter is not None and not self.pre_filter(data):
                 continue
             if self.pre_transform is not None:

@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from models import GIN, PNA, SPMotifNet
 from torch_geometric.nn import InstanceNorm
+
+from models import GIN, PNA, SPMotifNet
 
 
 def get_model(x_dim, edge_attr_dim, num_class, multi_label, model_config, device):

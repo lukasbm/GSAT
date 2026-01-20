@@ -1,29 +1,31 @@
-import yaml
-import scipy
-import numpy as np
-from tqdm import tqdm
-from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
+import yaml
+from ogb.graphproppred import Evaluator
+from rdkit import Chem
+from sklearn.metrics import roc_auc_score
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch_sparse import transpose
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import subgraph, is_undirected
-from ogb.graphproppred import Evaluator
-from sklearn.metrics import roc_auc_score
-from rdkit import Chem
+from torch_sparse import transpose
+from tqdm import tqdm
 
 from pretrain_clf import train_clf_one_seed
-from utils import Writer, Criterion, MLP, visualize_a_graph, save_checkpoint, load_checkpoint, get_preds, get_lr, set_seed, process_data
-from utils import get_local_config_name, get_model, get_data_loaders, write_stat_from_metric_dicts, reorder_like, init_metric_dict
+from utils import Writer, Criterion, MLP, visualize_a_graph, save_checkpoint, load_checkpoint, get_preds, get_lr, \
+    set_seed, process_data
+from utils import get_local_config_name, get_model, get_data_loaders, write_stat_from_metric_dicts, reorder_like, \
+    init_metric_dict
 
 
 class GSAT(nn.Module):
 
-    def __init__(self, clf, extractor, optimizer, scheduler, writer, device, model_dir, dataset_name, num_class, multi_label, random_state,
+    def __init__(self, clf, extractor, optimizer, scheduler, writer, device, model_dir, dataset_name, num_class,
+                 multi_label, random_state,
                  method_config, shared_config):
         super().__init__()
         self.clf = clf
@@ -60,8 +62,9 @@ class GSAT(nn.Module):
     def __loss__(self, att, clf_logits, clf_labels, epoch):
         pred_loss = self.criterion(clf_logits, clf_labels)
 
-        r = self.fix_r if self.fix_r else self.get_r(self.decay_interval, self.decay_r, epoch, final_r=self.final_r, init_r=self.init_r)
-        info_loss = (att * torch.log(att/r + 1e-6) + (1-att) * torch.log((1-att)/(1-r+1e-6) + 1e-6)).mean()
+        r = self.fix_r if self.fix_r else self.get_r(self.decay_interval, self.decay_r, epoch, final_r=self.final_r,
+                                                     init_r=self.init_r)
+        info_loss = (att * torch.log(att / r + 1e-6) + (1 - att) * torch.log((1 - att) / (1 - r + 1e-6) + 1e-6)).mean()
 
         pred_loss = pred_loss * self.pred_loss_coef
         info_loss = info_loss * self.info_loss_coef
@@ -134,8 +137,11 @@ class GSAT(nn.Module):
 
                 for k, v in all_loss_dict.items():
                     all_loss_dict[k] = v / loader_len
-                desc, att_auroc, precision, clf_acc, clf_roc, avg_loss = self.log_epoch(epoch, phase, all_loss_dict, all_exp_labels, all_att,
-                                                                                        all_precision_at_k, all_clf_labels, all_clf_logits, batch=False)
+                desc, att_auroc, precision, clf_acc, clf_roc, avg_loss = self.log_epoch(epoch, phase, all_loss_dict,
+                                                                                        all_exp_labels, all_att,
+                                                                                        all_precision_at_k,
+                                                                                        all_clf_labels, all_clf_logits,
+                                                                                        batch=False)
             pbar.set_description(desc)
         return att_auroc, precision, clf_acc, clf_roc, avg_loss
 
@@ -152,15 +158,21 @@ class GSAT(nn.Module):
             if self.scheduler is not None:
                 self.scheduler.step(valid_res[main_metric_idx])
 
-            r = self.fix_r if self.fix_r else self.get_r(self.decay_interval, self.decay_r, epoch, final_r=self.final_r, init_r=self.init_r)
-            if (r == self.final_r or self.fix_r) and epoch > 10 and ((valid_res[main_metric_idx] > metric_dict['metric/best_clf_valid'])
-                                                                     or (valid_res[main_metric_idx] == metric_dict['metric/best_clf_valid']
-                                                                         and valid_res[4] < metric_dict['metric/best_clf_valid_loss'])):
-
+            r = self.fix_r if self.fix_r else self.get_r(self.decay_interval, self.decay_r, epoch, final_r=self.final_r,
+                                                         init_r=self.init_r)
+            if (r == self.final_r or self.fix_r) and epoch > 10 and (
+                    (valid_res[main_metric_idx] > metric_dict['metric/best_clf_valid'])
+                    or (valid_res[main_metric_idx] == metric_dict['metric/best_clf_valid']
+                        and valid_res[4] < metric_dict['metric/best_clf_valid_loss'])):
                 metric_dict = {'metric/best_clf_epoch': epoch, 'metric/best_clf_valid_loss': valid_res[4],
-                               'metric/best_clf_train': train_res[main_metric_idx], 'metric/best_clf_valid': valid_res[main_metric_idx], 'metric/best_clf_test': test_res[main_metric_idx],
-                               'metric/best_x_roc_train': train_res[0], 'metric/best_x_roc_valid': valid_res[0], 'metric/best_x_roc_test': test_res[0],
-                               'metric/best_x_precision_train': train_res[1], 'metric/best_x_precision_valid': valid_res[1], 'metric/best_x_precision_test': test_res[1]}
+                               'metric/best_clf_train': train_res[main_metric_idx],
+                               'metric/best_clf_valid': valid_res[main_metric_idx],
+                               'metric/best_clf_test': test_res[main_metric_idx],
+                               'metric/best_x_roc_train': train_res[0], 'metric/best_x_roc_valid': valid_res[0],
+                               'metric/best_x_roc_test': test_res[0],
+                               'metric/best_x_precision_train': train_res[1],
+                               'metric/best_x_precision_valid': valid_res[1],
+                               'metric/best_x_precision_test': test_res[1]}
                 save_checkpoint(self.clf, self.model_dir, model_name='gsat_clf_epoch_' + str(epoch))
                 save_checkpoint(self.extractor, self.model_dir, model_name='gsat_att_epoch_' + str(epoch))
 
@@ -192,7 +204,9 @@ class GSAT(nn.Module):
                 self.writer.add_scalar(f'gsat_{phase}/{k}', v, epoch)
             desc += f'{k}: {v:.3f}, '
 
-        eval_desc, att_auroc, precision, clf_acc, clf_roc = self.get_eval_score(epoch, phase, exp_labels, att, precision_at_k, clf_labels, clf_logits, batch)
+        eval_desc, att_auroc, precision, clf_acc, clf_roc = self.get_eval_score(epoch, phase, exp_labels, att,
+                                                                                precision_at_k, clf_labels, clf_logits,
+                                                                                batch)
         desc += eval_desc
         return desc, att_auroc, precision, clf_acc, clf_roc, loss_dict['pred']
 
@@ -231,7 +245,7 @@ class GSAT(nn.Module):
 
     def get_precision_at_k(self, att, exp_labels, k, batch, edge_index):
         precision_at_k = []
-        for i in range(batch.max()+1):
+        for i in range(batch.max() + 1):
             nodes_for_graph_i = batch == i
             edges_for_graph_i = nodes_for_graph_i[edge_index[0]] & nodes_for_graph_i[edge_index[1]]
             labels_for_graph_i = exp_labels[edges_for_graph_i]
@@ -264,7 +278,8 @@ class GSAT(nn.Module):
         for i in tqdm(range(len(viz_set))):
             mol_type, coor = None, None
             if self.dataset_name == 'mutag':
-                node_dict = {0: 'C', 1: 'O', 2: 'Cl', 3: 'H', 4: 'N', 5: 'F', 6: 'Br', 7: 'S', 8: 'P', 9: 'I', 10: 'Na', 11: 'K', 12: 'Li', 13: 'Ca'}
+                node_dict = {0: 'C', 1: 'O', 2: 'Cl', 3: 'H', 4: 'N', 5: 'F', 6: 'Br', 7: 'S', 8: 'P', 9: 'I', 10: 'Na',
+                             11: 'K', 12: 'Li', 13: 'Ca'}
                 mol_type = {k: node_dict[v.item()] for k, v in enumerate(viz_set[i].node_type)}
             elif self.dataset_name == 'Graph-SST2':
                 mol_type = {k: v for k, v in enumerate(viz_set[i].sentence_tokens)}
@@ -273,16 +288,20 @@ class GSAT(nn.Module):
                 y = np.ones_like(x)
                 coor = np.stack([x, y], axis=1)
             elif self.dataset_name == 'ogbg_molhiv':
-                element_idxs = {k: int(v+1) for k, v in enumerate(viz_set[i].x[:, 0])}
-                mol_type = {k: Chem.PeriodicTable.GetElementSymbol(Chem.GetPeriodicTable(), int(v)) for k, v in element_idxs.items()}
+                element_idxs = {k: int(v + 1) for k, v in enumerate(viz_set[i].x[:, 0])}
+                mol_type = {k: Chem.PeriodicTable.GetElementSymbol(Chem.GetPeriodicTable(), int(v)) for k, v in
+                            element_idxs.items()}
             elif self.dataset_name == 'mnist':
                 raise NotImplementedError
 
             node_subset = data.batch == i
             _, edge_att = subgraph(node_subset, data.edge_index, edge_attr=batch_att)
 
-            node_label = viz_set[i].node_label.reshape(-1) if viz_set[i].get('node_label', None) is not None else torch.zeros(viz_set[i].x.shape[0])
-            fig, img = visualize_a_graph(viz_set[i].edge_index, edge_att, node_label, self.dataset_name, norm=self.viz_norm_att, mol_type=mol_type, coor=coor)
+            node_label = viz_set[i].node_label.reshape(-1) if viz_set[i].get('node_label',
+                                                                             None) is not None else torch.zeros(
+                viz_set[i].x.shape[0])
+            fig, img = visualize_a_graph(viz_set[i].edge_index, edge_att, node_label, self.dataset_name,
+                                         norm=self.viz_norm_att, mol_type=mol_type, coor=coor)
             imgs.append(img)
         imgs = np.stack(imgs)
         self.writer.add_images(tag, imgs, epoch, dataformats='NHWC')
@@ -356,7 +375,9 @@ def train_gsat_one_seed(local_config, data_dir, log_dir, model_name, dataset_nam
     assert method_config['method_name'] == method_name
 
     batch_size, splits = data_config['batch_size'], data_config.get('splits', None)
-    loaders, test_set, x_dim, edge_attr_dim, num_class, aux_info = get_data_loaders(data_dir, dataset_name, batch_size, splits, random_state, data_config.get('mutag_x', False))
+    loaders, test_set, x_dim, edge_attr_dim, num_class, aux_info = get_data_loaders(data_dir, dataset_name, batch_size,
+                                                                                    splits, random_state,
+                                                                                    data_config.get('mutag_x', False))
 
     model_config['deg'] = aux_info['deg']
     model = get_model(x_dim, edge_attr_dim, num_class, aux_info['multi_label'], model_config, device)
@@ -388,7 +409,8 @@ def train_gsat_one_seed(local_config, data_dir, log_dir, model_name, dataset_nam
 
     print('====================================')
     print('[INFO] Training GSAT...')
-    gsat = GSAT(model, extractor, optimizer, scheduler, writer, device, log_dir, dataset_name, num_class, aux_info['multi_label'], random_state, method_config, shared_config)
+    gsat = GSAT(model, extractor, optimizer, scheduler, writer, device, log_dir, dataset_name, num_class,
+                aux_info['multi_label'], random_state, method_config, shared_config)
     metric_dict = gsat.train(loaders, test_set, metric_dict, model_config.get('use_edge_attr', True))
     writer.add_hparams(hparam_dict=hparam_dict, metric_dict=metric_dict)
     return hparam_dict, metric_dict
@@ -426,11 +448,14 @@ def main():
 
     metric_dicts = []
     for random_state in range(num_seeds):
-        log_dir = data_dir / dataset_name / 'logs' / (time + '-' + dataset_name + '-' + model_name + '-seed' + str(random_state) + '-' + method_name)
-        hparam_dict, metric_dict = train_gsat_one_seed(local_config, data_dir, log_dir, model_name, dataset_name, method_name, device, random_state)
+        log_dir = data_dir / dataset_name / 'logs' / (
+                time + '-' + dataset_name + '-' + model_name + '-seed' + str(random_state) + '-' + method_name)
+        hparam_dict, metric_dict = train_gsat_one_seed(local_config, data_dir, log_dir, model_name, dataset_name,
+                                                       method_name, device, random_state)
         metric_dicts.append(metric_dict)
 
-    log_dir = data_dir / dataset_name / 'logs' / (time + '-' + dataset_name + '-' + model_name + '-seed99-' + method_name + '-stat')
+    log_dir = data_dir / dataset_name / 'logs' / (
+            time + '-' + dataset_name + '-' + model_name + '-seed99-' + method_name + '-stat')
     log_dir.mkdir(parents=True, exist_ok=True)
     writer = Writer(log_dir=log_dir)
     write_stat_from_metric_dicts(hparam_dict, metric_dicts, writer)

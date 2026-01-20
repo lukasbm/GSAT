@@ -1,10 +1,9 @@
 # https://github.com/flyingdoog/PGExplainer/blob/master/MUTAG.ipynb
 
-import yaml
-import torch
-import numpy as np
 import pickle as pkl
-from pathlib import Path
+
+import numpy as np
+import torch
 from torch_geometric.data import InMemoryDataset, Data
 
 
@@ -57,7 +56,8 @@ class Mutag(InMemoryDataset):
             if y.item() == 0 and len(signal_nodes) == 0:
                 continue
 
-            data_list.append(Data(x=x, y=y, edge_index=edge_index, node_label=node_label, edge_label=edge_label, node_type=torch.tensor(node_type_lists[i])))
+            data_list.append(Data(x=x, y=y, edge_index=edge_index, node_label=node_label, edge_label=edge_label,
+                                  node_type=torch.tensor(node_type_lists[i])))
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
@@ -96,8 +96,8 @@ class Mutag(InMemoryDataset):
         for i in range(len(graph_indicator)):
             if graph_indicator[i] != graph_id:
                 graph_id = graph_indicator[i]
-                starts.append(i+1)
-            node2graph[i+1] = len(starts)-1
+                starts.append(i + 1)
+            node2graph[i + 1] = len(starts) - 1
         # print(starts)
         # print(node2graph)
         graphid = 0
@@ -120,7 +120,7 @@ class Mutag(InMemoryDataset):
                 edge_label_list = []
                 graphid = gid
             start = starts[gid]
-            edge_list.append((s-start, t-start))
+            edge_list.append((s - start, t - start))
             edge_label_list.append(l)
 
         edge_lists.append(edge_list)
@@ -131,7 +131,7 @@ class Mutag(InMemoryDataset):
         graphid = 0
         node_label_list = []
         for i in range(len(node_labels)):
-            nid = i+1
+            nid = i + 1
             gid = node2graph[nid]
             # start = starts[gid]
             if gid != graphid:

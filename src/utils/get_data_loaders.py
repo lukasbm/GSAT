@@ -1,10 +1,10 @@
-import torch
 import numpy as np
-from torch_geometric.data import Batch
-from torch_geometric.utils import degree
-from torch_geometric.loader import DataLoader
-
+import torch
 from ogb.graphproppred import PygGraphPropPredDataset
+from torch_geometric.data import Batch
+from torch_geometric.loader import DataLoader
+from torch_geometric.utils import degree
+
 from datasets import SynGraphDataset, Mutag, SPMotif, MNIST75sp, graph_sst2
 
 
@@ -36,7 +36,8 @@ def get_data_loaders(data_dir, dataset_name, batch_size, splits, random_state, m
 
     elif dataset_name == 'Graph-SST2':
         dataset = graph_sst2.get_dataset(dataset_dir=data_dir, dataset_name='Graph-SST2', task=None)
-        dataloader, (train_set, valid_set, test_set) = graph_sst2.get_dataloader(dataset, batch_size=batch_size, degree_bias=True, seed=random_state)
+        dataloader, (train_set, valid_set, test_set) = graph_sst2.get_dataloader(dataset, batch_size=batch_size,
+                                                                                 degree_bias=True, seed=random_state)
         print('[INFO] Using default splits!')
         loaders = {'train': dataloader['train'], 'valid': dataloader['eval'], 'test': dataloader['test']}
         test_set = dataset  # used for visualization
@@ -47,7 +48,8 @@ def get_data_loaders(data_dir, dataset_name, batch_size, splits, random_state, m
         valid_set = SPMotif(root=data_dir / dataset_name, b=b, mode='val')
         test_set = SPMotif(root=data_dir / dataset_name, b=b, mode='test')
         print('[INFO] Using default splits!')
-        loaders, test_set = get_loaders_and_test_set(batch_size, dataset_splits={'train': train_set, 'valid': valid_set, 'test': test_set})
+        loaders, test_set = get_loaders_and_test_set(batch_size, dataset_splits={'train': train_set, 'valid': valid_set,
+                                                                                 'test': test_set})
 
     elif dataset_name == 'mnist':
         n_train_data, n_val_data = 20000, 5000
@@ -57,7 +59,8 @@ def get_data_loaders(data_dir, dataset_name, batch_size, splits, random_state, m
 
         train_set, valid_set = train_val[:n_train_data], train_val[-n_val_data:]
         test_set = MNIST75sp(data_dir / 'mnist', mode='test')
-        loaders, test_set = get_loaders_and_test_set(batch_size, dataset_splits={'train': train_set, 'valid': valid_set, 'test': test_set})
+        loaders, test_set = get_loaders_and_test_set(batch_size, dataset_splits={'train': train_set, 'valid': valid_set,
+                                                                                 'test': test_set})
         print('[INFO] Using default splits!')
 
     x_dim = test_set[0].x.shape[1]
@@ -95,8 +98,8 @@ def get_random_split_idx(dataset, splits, random_state=None, mutag_x=False):
     if not mutag_x:
         n_train, n_valid = int(splits['train'] * len(idx)), int(splits['valid'] * len(idx))
         train_idx = idx[:n_train]
-        valid_idx = idx[n_train:n_train+n_valid]
-        test_idx = idx[n_train+n_valid:]
+        valid_idx = idx[n_train:n_train + n_valid]
+        test_idx = idx[n_train + n_valid:]
     else:
         print('[INFO] mutag_x is True!')
         n_train = int(splits['train'] * len(idx))

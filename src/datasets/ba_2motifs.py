@@ -1,14 +1,13 @@
 # https://github.com/divelab/DIG/blob/dig/dig/xgraph/dataset/syn_dataset.py
 
 import os
-import yaml
-import torch
-import pickle
-import numpy as np
 import os.path as osp
-from pathlib import Path
-from torch_geometric.utils import dense_to_sparse
+import pickle
+
+import numpy as np
+import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
+from torch_geometric.utils import dense_to_sparse
 
 
 def read_ba2motif_data(folder: str, prefix):
@@ -23,7 +22,8 @@ def read_ba2motif_data(folder: str, prefix):
 
         node_label = torch.zeros(x.shape[0]).float()
         node_label[20:] = 1
-        edge_label = ((edge_index[0] >= 20) & (edge_index[0] < 25) & (edge_index[1] >= 20) & (edge_index[1] < 25)).float()
+        edge_label = (
+                    (edge_index[0] >= 20) & (edge_index[0] < 25) & (edge_index[1] >= 20) & (edge_index[1] < 25)).float()
 
         data_list.append(Data(x=x, edge_index=edge_index, y=y, node_label=node_label, edge_label=edge_label))
     return data_list

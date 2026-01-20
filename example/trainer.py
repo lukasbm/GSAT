@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('../src')
 
 import torch
@@ -63,7 +64,8 @@ def run_one_epoch(gsat, data_loader, epoch, phase, dataset_name, seed, use_edge_
 
             for k, v in all_loss_dict.items():
                 all_loss_dict[k] = v / loader_len
-            desc, att_auroc, clf_acc, clf_roc, avg_loss = log_epoch(epoch, phase, all_loss_dict, all_exp_labels, all_att, all_clf_labels, all_clf_logits,
+            desc, att_auroc, clf_acc, clf_roc, avg_loss = log_epoch(epoch, phase, all_loss_dict, all_exp_labels,
+                                                                    all_att, all_clf_labels, all_clf_logits,
                                                                     dataset_name, seed, multi_label, batch=False)
         pbar.set_description(desc)
     return att_auroc, None, clf_acc, clf_roc, avg_loss
@@ -74,7 +76,8 @@ def log_epoch(epoch, phase, loss_dict, exp_labels, att, clf_labels, clf_logits, 
     for k, v in loss_dict.items():
         desc += f'{k}: {v:.3f}, '
 
-    eval_desc, att_auroc, clf_acc, clf_roc = get_eval_score(exp_labels, att, clf_labels, clf_logits, dataset_name, multi_label, batch)
+    eval_desc, att_auroc, clf_acc, clf_roc = get_eval_score(exp_labels, att, clf_labels, clf_logits, dataset_name,
+                                                            multi_label, batch)
     desc += eval_desc
     return desc, att_auroc, clf_acc, clf_roc, loss_dict['pred']
 
@@ -103,12 +106,16 @@ def update_best_epoch_res(gsat, train_res, valid_res, test_res, metric_dict, dat
     model_dir.mkdir(parents=True, exist_ok=True)
 
     if (current_r == gsat.final_r) and ((valid_res[main_metric_idx] > metric_dict['metric/best_clf_valid'])
-                                        or (valid_res[main_metric_idx] == metric_dict['metric/best_clf_valid'] and valid_res[4] < metric_dict['metric/best_clf_valid_loss'])):
-
+                                        or (valid_res[main_metric_idx] == metric_dict['metric/best_clf_valid'] and
+                                            valid_res[4] < metric_dict['metric/best_clf_valid_loss'])):
         metric_dict = {'metric/best_clf_epoch': epoch, 'metric/best_clf_valid_loss': valid_res[4],
-                       'metric/best_clf_train': train_res[main_metric_idx], 'metric/best_clf_valid': valid_res[main_metric_idx], 'metric/best_clf_test': test_res[main_metric_idx],
-                       'metric/best_x_roc_train': train_res[0], 'metric/best_x_roc_valid': valid_res[0], 'metric/best_x_roc_test': test_res[0],
-                       'metric/best_x_precision_train': train_res[1], 'metric/best_x_precision_valid': valid_res[1], 'metric/best_x_precision_test': test_res[1]}
+                       'metric/best_clf_train': train_res[main_metric_idx],
+                       'metric/best_clf_valid': valid_res[main_metric_idx],
+                       'metric/best_clf_test': test_res[main_metric_idx],
+                       'metric/best_x_roc_train': train_res[0], 'metric/best_x_roc_valid': valid_res[0],
+                       'metric/best_x_roc_test': test_res[0],
+                       'metric/best_x_precision_train': train_res[1], 'metric/best_x_precision_valid': valid_res[1],
+                       'metric/best_x_precision_test': test_res[1]}
         save_checkpoint(gsat, model_dir, model_name='gsat_epoch_' + str(epoch))
     return metric_dict
 
@@ -139,7 +146,8 @@ def get_viz_idx(test_set, dataset_name, num_viz_samples):
 
 def visualize_results(gsat, all_viz_set, test_set, num_viz_samples, dataset_name, use_edge_attr):
     figsize = 10
-    fig, axes = plt.subplots(len(all_viz_set), num_viz_samples, figsize=(figsize*num_viz_samples, figsize*len(all_viz_set)*0.8))
+    fig, axes = plt.subplots(len(all_viz_set), num_viz_samples,
+                             figsize=(figsize * num_viz_samples, figsize * len(all_viz_set) * 0.8))
 
     for class_idx, (idx, tag) in enumerate(all_viz_set):
         viz_set = test_set[idx]
@@ -150,7 +158,8 @@ def visualize_results(gsat, all_viz_set, test_set, num_viz_samples, dataset_name
         for i in tqdm(range(len(viz_set))):
             mol_type, coor = None, None
             if dataset_name == 'mutag':
-                node_dict = {0: 'C', 1: 'O', 2: 'Cl', 3: 'H', 4: 'N', 5: 'F', 6: 'Br', 7: 'S', 8: 'P', 9: 'I', 10: 'Na', 11: 'K', 12: 'Li', 13: 'Ca'}
+                node_dict = {0: 'C', 1: 'O', 2: 'Cl', 3: 'H', 4: 'N', 5: 'F', 6: 'Br', 7: 'S', 8: 'P', 9: 'I', 10: 'Na',
+                             11: 'K', 12: 'Li', 13: 'Ca'}
                 mol_type = {k: node_dict[v.item()] for k, v in enumerate(viz_set[i].node_type)}
             elif dataset_name == 'Graph-SST2':
                 mol_type = {k: v for k, v in enumerate(viz_set[i].sentence_tokens)}
@@ -159,33 +168,40 @@ def visualize_results(gsat, all_viz_set, test_set, num_viz_samples, dataset_name
                 y = np.ones_like(x)
                 coor = np.stack([x, y], axis=1)
             elif dataset_name == 'ogbg_molhiv':
-                element_idxs = {k: int(v+1) for k, v in enumerate(viz_set[i].x[:, 0])}
-                mol_type = {k: Chem.PeriodicTable.GetElementSymbol(Chem.GetPeriodicTable(), int(v)) for k, v in element_idxs.items()}
+                element_idxs = {k: int(v + 1) for k, v in enumerate(viz_set[i].x[:, 0])}
+                mol_type = {k: Chem.PeriodicTable.GetElementSymbol(Chem.GetPeriodicTable(), int(v)) for k, v in
+                            element_idxs.items()}
             elif dataset_name == 'mnist':
                 raise NotImplementedError
 
             node_subset = data.batch == i
             _, edge_mask = subgraph(node_subset.cpu(), data.edge_index.cpu(), edge_attr=batch_att)
 
-            node_label = viz_set[i].node_label.reshape(-1) if viz_set[i].get('node_label', None) is not None else torch.zeros(viz_set[i].x.shape[0])
-            visualize_a_graph(viz_set[i].edge_index, edge_mask, node_label, dataset_name, axes[class_idx, i], norm=True, mol_type=mol_type, coor=coor)
+            node_label = viz_set[i].node_label.reshape(-1) if viz_set[i].get('node_label',
+                                                                             None) is not None else torch.zeros(
+                viz_set[i].x.shape[0])
+            visualize_a_graph(viz_set[i].edge_index, edge_mask, node_label, dataset_name, axes[class_idx, i], norm=True,
+                              mol_type=mol_type, coor=coor)
             # axes[class_idx, i].axis('off')
         fig.tight_layout()
 
-    each_plot_len = 1/len(viz_set)
+    each_plot_len = 1 / len(viz_set)
     for num in range(1, len(viz_set)):
-        line = plt.Line2D((each_plot_len*num, each_plot_len*num), (0, 1), color="gray", linewidth=1, linestyle='dashed', dashes=(5, 10))
+        line = plt.Line2D((each_plot_len * num, each_plot_len * num), (0, 1), color="gray", linewidth=1,
+                          linestyle='dashed', dashes=(5, 10))
         fig.add_artist(line)
 
-    each_plot_width = 1/len(all_viz_set)
+    each_plot_width = 1 / len(all_viz_set)
     for num in range(1, len(all_viz_set)):
-        line = plt.Line2D((0, 1), (each_plot_width*num, each_plot_width*num), color="gray", linestyle='dashed', dashes=(5, 10))
+        line = plt.Line2D((0, 1), (each_plot_width * num, each_plot_width * num), color="gray", linestyle='dashed',
+                          dashes=(5, 10))
         fig.add_artist(line)
 
 
-def visualize_a_graph(edge_index, edge_att, node_label, dataset_name, ax, coor=None, norm=False, mol_type=None, nodesize=300):
+def visualize_a_graph(edge_index, edge_att, node_label, dataset_name, ax, coor=None, norm=False, mol_type=None,
+                      nodesize=300):
     if norm:  # for better visualization
-        edge_att = edge_att**10
+        edge_att = edge_att ** 10
         edge_att = (edge_att - edge_att.min()) / (edge_att.max() - edge_att.min() + 1e-6)
 
     if mol_type is None or dataset_name == 'Graph-SST2':
@@ -194,7 +210,7 @@ def visualize_a_graph(edge_index, edge_att, node_label, dataset_name, ax, coor=N
         for y_idx in range(node_label.shape[0]):
             node_colors[y_idx] = atom_colors[node_label[y_idx].int().tolist()]
     else:
-        node_color = ['#29A329', 'lime', '#F0EA00',  'maroon', 'brown', '#E49D1C', '#4970C6', '#FF5357']
+        node_color = ['#29A329', 'lime', '#F0EA00', 'maroon', 'brown', '#E49D1C', '#4970C6', '#FF5357']
         element_idxs = {k: Chem.PeriodicTable.GetAtomicNumber(Chem.GetPeriodicTable(), v) for k, v in mol_type.items()}
         node_colors = [node_color[(v - 1) % len(node_color)] for k, v in element_idxs.items()]
 
@@ -227,4 +243,5 @@ def visualize_a_graph(edge_index, edge_att, node_label, dataset_name, ax, coor=N
         nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=nodesize, ax=ax)
         nx.draw_networkx_edges(G, pos, width=1, edge_color='gray', arrows=False, alpha=0.1, ax=ax)
     else:
-        nx.draw_networkx_edges(G, pos, width=1, edge_color='gray', arrows=False, alpha=0.1, ax=ax, connectionstyle='arc3,rad=0.4')
+        nx.draw_networkx_edges(G, pos, width=1, edge_color='gray', arrows=False, alpha=0.1, ax=ax,
+                               connectionstyle='arc3,rad=0.4')

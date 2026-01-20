@@ -1,10 +1,10 @@
 # https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/nn/models/basic_gnn.html#GIN
 
 import torch.nn as nn
-from torch.nn import Linear
 import torch.nn.functional as F
-from torch_geometric.nn import global_add_pool
 from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
+from torch.nn import Linear
+from torch_geometric.nn import global_add_pool
 
 from .conv_layers import GINConv, GINEConv
 

@@ -1,21 +1,19 @@
 # From https://github.com/divelab/DIG/blob/main/dig/xgraph/datasets/load_datasets.py
 
-import os
-import yaml
 import glob
 import json
-import random
-import torch
-import pickle
-import numpy as np
+import os
 import os.path as osp
-from torch_geometric.datasets import MoleculeNet
-from torch_geometric.utils import dense_to_sparse
-from torch.utils.data import random_split, Subset
-from torch_geometric.data import Data, InMemoryDataset
-from torch_geometric.loader import DataLoader
+import pickle
 
-from pathlib import Path
+import numpy as np
+import torch
+from torch.utils.data import random_split
+from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.datasets import MoleculeNet
+from torch_geometric.loader import DataLoader
+from torch_geometric.utils import dense_to_sparse
+
 
 def undirected_graph(data):
     data.edge_index = torch.cat([torch.stack([data.edge_index[1], data.edge_index[0]], dim=0),
@@ -55,12 +53,12 @@ def read_sentigraph_data(folder: str, prefix: str):
     json_names = [f.split(os.sep)[-1][len(prefix) + 1:-5] for f in json_files]
     names = txt_names + json_names
 
-    with open(os.path.join(folder, prefix+"_node_features.pkl"), 'rb') as f:
+    with open(os.path.join(folder, prefix + "_node_features.pkl"), 'rb') as f:
         x: np.array = pickle.load(f)
     x: torch.FloatTensor = torch.from_numpy(x)
     edge_index: np.array = read_file(folder, prefix, 'edge_index')
     edge_index: torch.tensor = torch.tensor(edge_index, dtype=torch.long).T
-    batch: np.array = read_file(folder, prefix, 'node_indicator') - 1     # from zero
+    batch: np.array = read_file(folder, prefix, 'node_indicator') - 1  # from zero
     y: np.array = read_file(folder, prefix, 'graph_labels')
     y: torch.tensor = torch.tensor(y, dtype=torch.long)
     edge_attr = torch.ones((edge_index.size(1), 1)).float()
@@ -74,7 +72,8 @@ def read_sentigraph_data(folder: str, prefix: str):
         with open(os.path.join(folder, prefix + '_sentence_tokens.json')) as f:
             sentence_tokens: dict = json.load(f)
         supplement['sentence_tokens'] = sentence_tokens
-    data = Data(name=name, x=x, edge_index=edge_index, y=y.reshape(-1, 1).float(), sentence_tokens=list(sentence_tokens.values()))
+    data = Data(name=name, x=x, edge_index=edge_index, y=y.reshape(-1, 1).float(),
+                sentence_tokens=list(sentence_tokens.values()))
     data, slices = split(data, batch)
 
     return data, slices, supplement
@@ -227,7 +226,7 @@ class SentiGraphDataset(InMemoryDataset):
     def process(self):
         # Read data into huge `Data` list.
         self.data, self.slices, self.supplement \
-              = read_sentigraph_data(self.raw_dir, self.name)
+            = read_sentigraph_data(self.raw_dir, self.name)
 
         if self.pre_filter is not None:
             data_list = [self.get(idx) for idx in range(len(self))]
@@ -351,7 +350,8 @@ class BA_LRP(InMemoryDataset):
 
         for i in range(2, 20):
             data.x = torch.cat([data.x, torch.tensor([[1]], dtype=torch.float)], dim=0)
-            deg_reciprocal = torch.stack([1 / ((data.edge_index[0] == node_idx).float().sum() + epsilon) for node_idx in range(i)], dim=0)
+            deg_reciprocal = torch.stack(
+                [1 / ((data.edge_index[0] == node_idx).float().sum() + epsilon) for node_idx in range(i)], dim=0)
             sum_deg_reciprocal = deg_reciprocal.sum(dim=0, keepdim=True)
             probs = (deg_reciprocal / sum_deg_reciprocal).unsqueeze(0)
             prob_dist = torch.distributions.Categorical(probs)
@@ -414,6 +414,7 @@ class SentiGraphTransform(object):
         if self.transform is not None:
             return self.transform(data)
         return data
+
 
 def load_SeniGraph(dataset_dir, dataset_name, transform=None):
     sent_transform = SentiGraphTransform(transform)

@@ -3,6 +3,7 @@
 import torch
 from torch.nn import Linear, ReLU, ModuleList
 from torch_geometric.nn import global_mean_pool
+
 from .conv_layers import LEConv
 
 
@@ -26,15 +27,15 @@ class SPMotifNet(torch.nn.Module):
         self.pool = global_mean_pool
 
         self.fc_out = torch.nn.Sequential(
-            Linear(hidden_size, 2*hidden_size),
+            Linear(hidden_size, 2 * hidden_size),
             ReLU(),
-            Linear(2*hidden_size, num_class)
+            Linear(2 * hidden_size, num_class)
         )
 
         self.conf_mlp = torch.nn.Sequential(
-            Linear(hidden_size, 2*hidden_size),
+            Linear(hidden_size, 2 * hidden_size),
             ReLU(),
-            Linear(2*hidden_size, 3)
+            Linear(2 * hidden_size, 3)
         )
         self.cq = Linear(3, 3)
         self.conf_fw = torch.nn.Sequential(

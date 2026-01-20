@@ -1,18 +1,19 @@
 from typing import Union, Optional, List, Dict
-from torch_geometric.typing import OptPairTensor, Adj, OptTensor, Size, PairTensor
 
 import torch
 from torch import Tensor
-from torch_geometric.nn import GINEConv as BaseGINEConv, GINConv as BaseGINConv, LEConv as BaseLEConv
 from torch.nn import Sequential, Linear, ReLU
+from torch_geometric.nn import GINEConv as BaseGINEConv, GINConv as BaseGINConv, LEConv as BaseLEConv
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.inits import reset
+from torch_geometric.typing import OptPairTensor, Adj, OptTensor, Size, PairTensor
 from torch_geometric.utils import degree
 from torch_scatter import scatter
 
 
 class GINConv(BaseGINConv):
-    def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj, edge_attr: OptTensor = None, edge_atten: OptTensor = None, size: Size = None) -> Tensor:
+    def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj, edge_attr: OptTensor = None,
+                edge_atten: OptTensor = None, size: Size = None) -> Tensor:
         """"""
         if isinstance(x, Tensor):
             x: OptPairTensor = (x, x)
@@ -34,7 +35,8 @@ class GINConv(BaseGINConv):
 
 
 class GINEConv(BaseGINEConv):
-    def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj, edge_attr: OptTensor = None, edge_atten: OptTensor = None, size: Size = None) -> Tensor:
+    def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj, edge_attr: OptTensor = None,
+                edge_atten: OptTensor = None, size: Size = None) -> Tensor:
         """"""
         if isinstance(x, Tensor):
             x: OptPairTensor = (x, x)
@@ -121,6 +123,7 @@ class PNAConvSimple(MessagePassing):
             **kwargs (optional): Additional arguments of
                 :class:`torch_geometric.nn.conv.MessagePassing`.
         """
+
     def __init__(self, in_channels: int, out_channels: int,
                  aggregators: List[str], scalers: List[str], deg: Tensor,
                  post_layers: int = 1, **kwargs):

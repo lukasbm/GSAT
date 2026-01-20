@@ -7,6 +7,7 @@ import math
 import networkx as nx
 import numpy as np
 
+
 # Following GraphWave's representation of structural similarity
 
 
@@ -34,12 +35,12 @@ def clique(start, nb_nodes, nb_to_remove=0, role_start=0):
     roles = [role_start] * nb_nodes
     if nb_to_remove > 0:
         lst = np.random.choice(len(edge_list), nb_to_remove, replace=False)
-#         print(edge_list, lst)
+        #         print(edge_list, lst)
         to_delete = [edge_list[e] for e in lst]
         graph.remove_edges_from(to_delete)
         for e in lst:
-#             print(edge_list[e][0])
-#             print(len(roles))
+            #             print(edge_list[e][0])
+            #             print(len(roles))
             roles[edge_list[e][0]] += 1
             roles[edge_list[e][1]] += 1
     mapping_graph = {k: (k + start) for k in range(nb_nodes)}
@@ -132,7 +133,6 @@ def tree(start, height, r=2, role_start=0):
     return graph, roles
 
 
-
 def ba(start, width, role_start=0, m=5):
     """Builds a BA preferential attachment graph, with index of nodes starting at start
     and role_ids at role_start
@@ -157,13 +157,12 @@ def ba(start, width, role_start=0, m=5):
 
 
 def wheel(start, width, role_start=0, m=5):
-    import random
     graph = nx.wheel_graph(width)
     roles = [0] * graph.number_of_nodes()
     return graph, roles
 
+
 def ladder(start, width, role_start=0, m=5):
-    import random
     graph = nx.ladder_graph(width)
     roles = [0] * graph.number_of_nodes()
     return graph, roles
@@ -225,16 +224,16 @@ def varcycle(start, role_start=0):
     graph.add_nodes_from(range(start, start + 5))
     graph.add_edges_from(
         [
-            (start , start + 1),
+            (start, start + 1),
             (start + 1, start + 2),
             (start + 3, start + 2),
-            (start , start + 4),
+            (start, start + 4),
             (start + 4, start + 3),
             (start, start + 2),
             (start, start + 3),
         ]
     )
-    roles =  [role_start, role_start + 1, role_start + 2, role_start + 2, role_start + 1]
+    roles = [role_start, role_start + 1, role_start + 2, role_start + 2, role_start + 1]
     return graph, roles
 
 
@@ -263,7 +262,7 @@ def crane(start, role_start=0):
     )
     # graph.add_edges_from([(start, start + 2), (start + 1, start + 3)])
     graph.add_edges_from([(start, start + 1), (start, start + 3)])
-    roles =  [role_start, role_start + 1, role_start + 2, role_start + 1, role_start + 2]
+    roles = [role_start, role_start + 1, role_start + 2, role_start + 1, role_start + 2]
     return graph, roles
 
 
@@ -272,14 +271,14 @@ def dircycle(start, role_start=0):
     graph.add_nodes_from(range(start, start + 5))
     graph.add_edges_from(
         [
-            (start , start + 1),
+            (start, start + 1),
             (start + 1, start + 2),
             (start + 3, start + 2),
-            (start , start + 4),
+            (start, start + 4),
             (start + 4, start + 3),
         ]
     )
-    roles =  [role_start, role_start + 1, role_start + 2, role_start + 2, role_start + 1]
+    roles = [role_start, role_start + 1, role_start + 2, role_start + 2, role_start + 1]
     return graph, roles
 
 
@@ -308,7 +307,7 @@ def crossgrid(start, role_start=0):
     )
     # graph.add_edges_from([(start, start + 2), (start + 1, start + 3)])
     graph.add_edges_from([(start, start + 2), (start + 1, start + 3)])
-    roles = [1 for _ in range(4)]#[role_start for i in range(4)]
+    roles = [1 for _ in range(4)]  # [role_start for i in range(4)]
     return graph, roles
 
 
@@ -360,13 +359,13 @@ def path(start, width, role_start=0):
 
 
 def build_graph(
-    width_basis,
-    basis_type,
-    list_shapes,
-    start=0,
-    rdm_basis_plugins=False,
-    add_random_edges=0,
-    m=5,
+        width_basis,
+        basis_type,
+        list_shapes,
+        start=0,
+        rdm_basis_plugins=False,
+        add_random_edges=0,
+        m=5,
 ):
     """This function creates a basis (scale-free, path, or cycle)
     and attaches elements of the type in the list randomly along the basis.

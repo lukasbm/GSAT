@@ -1,12 +1,14 @@
-import yaml
-import torch
-import numpy as np
-from tqdm import tqdm
-from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import torch
+import yaml
 from ogb.graphproppred import Evaluator
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from tqdm import tqdm
+
 from utils import Criterion, Writer, get_data_loaders, get_model, save_checkpoint, set_seed, process_data
 from utils import get_preds, get_lr, get_local_config_name, write_stat_from_metric_dicts, init_metric_dict
 
@@ -30,7 +32,9 @@ def train_clf_one_seed(local_config, data_dir, log_dir, model_name, dataset_name
 
     if model is None:
         batch_size, splits = data_config['batch_size'], data_config.get('splits', None)
-        loaders, test_set, x_dim, edge_attr_dim, num_class, aux_info = get_data_loaders(data_dir, dataset_name, batch_size, splits, random_state)
+        loaders, test_set, x_dim, edge_attr_dim, num_class, aux_info = get_data_loaders(data_dir, dataset_name,
+                                                                                        batch_size, splits,
+                                                                                        random_state)
 
         model_config['deg'] = aux_info['deg']
         model = get_model(x_dim, edge_attr_dim, num_class, aux_info['multi_label'], model_config, device)
@@ -48,7 +52,8 @@ def train_clf_one_seed(local_config, data_dir, log_dir, model_name, dataset_name
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
     scheduler = None if scheduler_config == {} else ReduceLROnPlateau(optimizer, mode='max', **scheduler_config)
 
-    metric_dict = train(optimizer, scheduler, dataset_name, model, device, loaders, epochs, log_dir, writer, num_class, metric_dict, random_state,
+    metric_dict = train(optimizer, scheduler, dataset_name, model, device, loaders, epochs, log_dir, writer, num_class,
+                        metric_dict, random_state,
                         model_config.get('use_edge_attr', True), aux_info['multi_label'])
     writer.add_hparams(hparam_dict=hparam_dict, metric_dict=metric_dict)
     return hparam_dict, metric_dict
@@ -75,7 +80,8 @@ def train_one_batch(data, model, criterion, optimizer):
     return loss.item(), logits.data.cpu(), data.y.data.cpu()
 
 
-def run_one_epoch(dataset_name, data_loader, model, criterion, optimizer, epoch, phase, device, writer, random_state, use_edge_attr, multi_label):
+def run_one_epoch(dataset_name, data_loader, model, criterion, optimizer, epoch, phase, device, writer, random_state,
+                  use_edge_attr, multi_label):
     loader_len = len(data_loader)
     all_preds, all_targets, all_batch_losses, all_logits = [], [], [], []
 
@@ -93,8 +99,12 @@ def run_one_epoch(dataset_name, data_loader, model, criterion, optimizer, epoch,
         desc = f'[Seed: {random_state}, Epoch: {epoch}]: {phase}........., loss: {loss:.3f}, acc: {acc:.3f}, '
 
         if idx == loader_len - 1:
-            all_preds, all_targets, all_logits = np.concatenate(all_preds), np.concatenate(all_targets), np.concatenate(all_logits)
-            all_acc = (all_preds == all_targets).sum() / (all_targets.shape[0] * all_targets.shape[1]) if multi_label else (all_preds == all_targets).sum().item() / all_targets.shape[0]
+            all_preds, all_targets, all_logits = np.concatenate(all_preds), np.concatenate(all_targets), np.concatenate(
+                all_logits)
+            all_acc = (all_preds == all_targets).sum() / (
+                        all_targets.shape[0] * all_targets.shape[1]) if multi_label else (
+                                                                                                     all_preds == all_targets).sum().item() / \
+                                                                                         all_targets.shape[0]
 
             desc = f'[Seed: {random_state}, Epoch: {epoch}]: {phase} finished, loss: {np.mean(all_batch_losses):.3f}, acc: {all_acc:.3f}, '
 
@@ -111,21 +121,28 @@ def run_one_epoch(dataset_name, data_loader, model, criterion, optimizer, epoch,
     return auroc if auroc is not None else all_acc, np.mean(all_batch_losses)
 
 
-def train(optimizer, scheduler, dataset_name, model, device, loaders, epochs, model_dir, writer, num_class, metric_dict, random_state,
+def train(optimizer, scheduler, dataset_name, model, device, loaders, epochs, model_dir, writer, num_class, metric_dict,
+          random_state,
           use_edge_attr, multi_label):
     criterion = Criterion(num_class, multi_label)
 
     for epoch in range(epochs):
-        train_res, _ = run_one_epoch(dataset_name, loaders['train'], model, criterion, optimizer, epoch, 'train', device, writer, random_state, use_edge_attr, multi_label)
-        valid_res, valid_loss = run_one_epoch(dataset_name, loaders['valid'], model, criterion, None, epoch, 'valid', device, writer, random_state, use_edge_attr, multi_label)
-        test_res, _ = run_one_epoch(dataset_name, loaders['test'], model, criterion, None, epoch, 'test', device, writer, random_state, use_edge_attr, multi_label)
+        train_res, _ = run_one_epoch(dataset_name, loaders['train'], model, criterion, optimizer, epoch, 'train',
+                                     device, writer, random_state, use_edge_attr, multi_label)
+        valid_res, valid_loss = run_one_epoch(dataset_name, loaders['valid'], model, criterion, None, epoch, 'valid',
+                                              device, writer, random_state, use_edge_attr, multi_label)
+        test_res, _ = run_one_epoch(dataset_name, loaders['test'], model, criterion, None, epoch, 'test', device,
+                                    writer, random_state, use_edge_attr, multi_label)
 
         writer.add_scalar('clf/lr', get_lr(optimizer), epoch)
         if scheduler is not None:
             scheduler.step(valid_res)
-        if (valid_res > metric_dict['metric/best_clf_valid']) or (valid_res == metric_dict['metric/best_clf_valid'] and valid_loss < metric_dict['metric/best_clf_valid_loss']):
+        if (valid_res > metric_dict['metric/best_clf_valid']) or (
+                valid_res == metric_dict['metric/best_clf_valid'] and valid_loss < metric_dict[
+            'metric/best_clf_valid_loss']):
             metric_dict['metric/best_clf_epoch'] = epoch
-            metric_dict['metric/best_clf_train'], metric_dict['metric/best_clf_valid'], metric_dict['metric/best_clf_test'] = train_res, valid_res, test_res
+            metric_dict['metric/best_clf_train'], metric_dict['metric/best_clf_valid'], metric_dict[
+                'metric/best_clf_test'] = train_res, valid_res, test_res
             metric_dict['metric/best_clf_valid_loss'] = valid_loss
             save_checkpoint(model, model_dir, model_name=f'epoch_{epoch}')
 
@@ -169,11 +186,14 @@ def main():
 
     metric_dicts = []
     for random_state in range(num_seeds):
-        log_dir = data_dir / dataset_name / 'logs' / (time + '-' + dataset_name + '-' + model_name + '-seed' + str(random_state) + '-pretrain')
-        hparam_dict, metric_dict = train_clf_one_seed(local_config, data_dir, log_dir, model_name, dataset_name, device, random_state)
+        log_dir = data_dir / dataset_name / 'logs' / (
+                    time + '-' + dataset_name + '-' + model_name + '-seed' + str(random_state) + '-pretrain')
+        hparam_dict, metric_dict = train_clf_one_seed(local_config, data_dir, log_dir, model_name, dataset_name, device,
+                                                      random_state)
         metric_dicts.append(metric_dict)
 
-    log_dir = data_dir / dataset_name / 'logs' / (time + '-' + dataset_name + '-' + model_name + '-seed99' + '-pretrain' + '-stat')
+    log_dir = data_dir / dataset_name / 'logs' / (
+                time + '-' + dataset_name + '-' + model_name + '-seed99' + '-pretrain' + '-stat')
     log_dir.mkdir(parents=True, exist_ok=True)
     writer = Writer(log_dir=log_dir)
     write_stat_from_metric_dicts(hparam_dict, metric_dicts, writer)

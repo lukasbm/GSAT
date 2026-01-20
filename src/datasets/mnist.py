@@ -1,19 +1,16 @@
 # adapt from https://github.com/bknyaz/graph_attention_pool/blob/master/graphdata.py
 
-import numpy as np
 import os.path as osp
 import pickle
+
+import numpy as np
 import torch
 import torch.utils
 import torch.utils.data
-import torch.nn.functional as F
 from scipy.spatial.distance import cdist
-from torch_geometric.utils import dense_to_sparse
 from torch_geometric.data import InMemoryDataset, Data
-
-import yaml
-from pathlib import Path
 from torch_geometric.loader import DataLoader
+from torch_geometric.utils import dense_to_sparse
 
 
 def compute_adjacency_matrix_images(coord, sigma=0.1):
