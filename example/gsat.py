@@ -2,7 +2,6 @@ import sys
 
 sys.path.append('../src')
 
-import scipy
 import torch
 import torch.nn as nn
 from torch_sparse import transpose
